@@ -1,64 +1,30 @@
-#include <raylib.h>
+#include "raylib.h"
 
-void ExibirMenu(const char *opcoes[], int quantidadeOpcoes, Font fonte, int larguraTela, int alturaTela) {
-    Vector2 pontoMouse;
-    int selecionada = -1;
+void TextoMenu(const char *opcoes[], int quantidadeOpcoes, Font fonte, int larguraTela, int alturaTela, int *selecionada) {
+    Vector2 pontoMouse = GetMousePosition();
 
-    while (!WindowShouldClose()) {
-        pontoMouse = GetMousePosition();
-        selecionada = -1;
+    for (int i = 0; i < quantidadeOpcoes; i++) {
+        Vector2 tamanhoTexto = MeasureTextEx(fonte, opcoes[i], 40, 2);
+        Vector2 posicaoTexto = (Vector2){(larguraTela - tamanhoTexto.x) / 2, 330 + i * 60};
+        Rectangle areaTexto = {posicaoTexto.x, posicaoTexto.y, tamanhoTexto.x, tamanhoTexto.y};
 
-        float deltaTime = GetFrameTime();
-
-        BeginDrawing();
-        ClearBackground(WHITE);
-
-        // Desenhar as opções do menu
-        for (int i = 0; i < quantidadeOpcoes; i++) {
-            Vector2 tamanhoTexto = MeasureTextEx(fonte, opcoes[i], 40, 2);
-            Vector2 posicaoTexto = (Vector2){(larguraTela - tamanhoTexto.x) / 2, 300 + i * 60};
-            Rectangle areaTexto = {posicaoTexto.x, posicaoTexto.y, tamanhoTexto.x, tamanhoTexto.y};
-
-            // Detectar hover
-            if (CheckCollisionPointRec(pontoMouse, areaTexto)) {
-                selecionada = i;
-
-                // Desenhar o triângulo ao lado do botão
-                Vector2 posicaoTriangulo = {posicaoTexto.x + tamanhoTexto.x + 10, posicaoTexto.y + tamanhoTexto.y / 2};
-                DrawTriangle(
-                    (Vector2){posicaoTriangulo.x, posicaoTriangulo.y - 10}, // Ponto superior
-                    (Vector2){posicaoTriangulo.x + 10, posicaoTriangulo.y}, // Ponto direito
-                    (Vector2){posicaoTriangulo.x, posicaoTriangulo.y + 10}, // Ponto inferior
-                    BLACK // Triângulo preto
-                );
-            }
-
-            // Desenhar texto
-            DrawTextEx(fonte, opcoes[i], posicaoTexto, 40, 2, BLACK);
+        if (CheckCollisionPointRec(pontoMouse, areaTexto)) {
+            *selecionada = i;
+            Vector2 posicaoTriangulo = {posicaoTexto.x - 30, posicaoTexto.y + tamanhoTexto.y / 2};
+            DrawTriangle(
+                (Vector2){posicaoTriangulo.x + 10, posicaoTriangulo.y - 10},
+                (Vector2){posicaoTriangulo.x + 10, posicaoTriangulo.y + 10},
+                (Vector2){posicaoTriangulo.x + 20, posicaoTriangulo.y},
+                WHITE
+            );
         }
 
-        // Seleção ao clicar
-        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && selecionada != -1) {
-            switch (selecionada) {
-                case 0:
-                    // Iniciar jogo
-                    return;
-                case 1:
-                    // Opções
-                    break;
-                case 2:
-                    // Sair
-                    CloseWindow();
-                    return;
-            }
-        }
-
-        EndDrawing();
+        DrawTextEx(fonte, opcoes[i], posicaoTexto, 40, 2, WHITE);
     }
 }
 
 void menu() {
-    // Carregar texturas
+
     Texture2D robo1 = LoadTexture("./img/robo1.png");
     Texture2D robo2 = LoadTexture("./img/robo2.png");
     Texture2D robo3 = LoadTexture("./img/robo3.png");
@@ -66,60 +32,54 @@ void menu() {
     Texture2D nuvem = LoadTexture("./img/nuvem.png");
     Texture2D titulo = LoadTexture("./img/titulo.png");
 
-    // Variáveis de animação do robô
-    Texture2D roboAtual = robo1; // Começa com a primeira textura do robô
-    int roboFrame = 0;           // Índice do frame do robô
-    float frameTime = 0.5f;      // Tempo entre as trocas de frames
-    float roboTimer = 0.0f;      // Temporizador para o ciclo de animação do robô
-
-    // Variáveis para a nuvem
-    float nuvemX = 0.0f;         // Posição inicial da nuvem
-    float nuvemSpeed = 20.0f;   // Velocidade da nuvem (pixels por segundo)
+    Texture2D roboAtual = robo1;
+    int roboFrame = 0;
+    float frameTime = 0.5f;
+    float roboTimer = 0.0f;
+    float nuvemX = 0.0f, nuvemSpeed = 20.0f;
 
     Font fontePadrao = GetFontDefault();
-
-    const char *opcoesMenu[] = {"Iniciar", "Opções", "Sair"};
+    const char *opcoesMenu[] = {"New Game", "Load Game", "Options", "Exit"};
     int quantidadeOpcoes = sizeof(opcoesMenu) / sizeof(opcoesMenu[0]);
+    int selecionada = -1;
 
-    // Loop do menu
     while (!WindowShouldClose()) {
-        float deltaTime = GetFrameTime(); // Tempo decorrido por quadro
+        float deltaTime = GetFrameTime();
 
-        // Atualização da posição das nuvens
         nuvemX -= nuvemSpeed * deltaTime;
-        if (nuvemX <= -nuvem.width) {
-            nuvemX += nuvem.width; // Reposiciona as nuvens para criar o efeito contínuo
-        }
+        if (nuvemX <= -nuvem.width) nuvemX += nuvem.width;
 
-        // Atualização da animação do robô
         roboTimer += deltaTime;
         if (roboTimer >= frameTime) {
-            roboFrame = (roboFrame + 1) % 3; // Alterna entre 0, 1 e 2
-            if (roboFrame == 0) roboAtual = robo1;
-            else if (roboFrame == 1) roboAtual = robo2;
-            else roboAtual = robo3;
-
-            roboTimer = 0.0f; // Reinicia o temporizador
+            roboFrame = (roboFrame + 1) % 3;
+            roboAtual = (roboFrame == 0) ? robo1 : (roboFrame == 1) ? robo2 : robo3;
+            roboTimer = 0.0f;
         }
 
-        // Desenho
         BeginDrawing();
-        ClearBackground(WHITE);
+        ClearBackground(RAYWHITE);
 
-        // Ordem de desenho: fundo -> nuvens -> robô -> texto
-        DrawTexture(fundo, 0, 0, WHITE);                      // Fundo fixo
+        DrawTexture(fundo, 0, 0, WHITE);
         DrawTexture(nuvem, (int)nuvemX, -15, WHITE);
         DrawTexture(nuvem, (int)(nuvemX + nuvem.width), -15, WHITE);
         DrawTexture(roboAtual, 100, 400, WHITE);
-        DrawTexture(titulo, ((1280 - titulo.width)/2),90, WHITE);
+        DrawTexture(titulo, (1280 - titulo.width) / 2, 90, WHITE);
 
-        // Chamar a função do menu
-        ExibirMenu(opcoesMenu, quantidadeOpcoes, fontePadrao, 1280, 620);
+        TextoMenu(opcoesMenu, quantidadeOpcoes, fontePadrao, 1280, 620, &selecionada);
+
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && selecionada != -1) {
+            if (selecionada == 0) { }
+            if (selecionada == 1) { }
+            if (selecionada == 2) { }
+            if (selecionada == 3) {
+                CloseWindow();
+                return;
+            }
+        }
 
         EndDrawing();
     }
 
-    // Descarregar texturas
     UnloadTexture(robo1);
     UnloadTexture(robo2);
     UnloadTexture(robo3);
@@ -129,13 +89,8 @@ void menu() {
 }
 
 int main(void) {
-    // Inicializar janela
-    InitWindow(1280, 620, "Joguinho");
-
-    // Chamar o menu
+    InitWindow(1280, 620, "Blast Escape");
     menu();
-
-    // Fechar janela
     CloseWindow();
     return 0;
 }
